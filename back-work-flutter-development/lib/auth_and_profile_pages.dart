@@ -39,21 +39,62 @@ class LoginOrSignupPage extends StatefulWidget {
   State<LoginOrSignupPage> createState() => _LoginOrSignupPageState();
 }
 
-class _LoginOrSignupPageState extends State<LoginOrSignupPage> {
+class _LoginOrSignupPageState extends State<LoginOrSignupPage> with TickerProviderStateMixin {
   bool _showLoginPage = true;
+  late AnimationController _pageTransitionController;
+  late Animation<Offset> _slideAnimation;
+  late Animation<double> _fadeAnimation;
 
-  void togglePages() {
+  @override
+  void initState() {
+    super.initState();
+    _pageTransitionController = AnimationController(
+      duration: const Duration(milliseconds: 400),
+      vsync: this,
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0.3, 0),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _pageTransitionController,
+      curve: Curves.easeOutCubic,
+    ));
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _pageTransitionController,
+      curve: Curves.easeOut,
+    ));
+    _pageTransitionController.forward();
+  }
+
+  @override
+  void dispose() {
+    _pageTransitionController.dispose();
+    super.dispose();
+  }
+
+  void togglePages() async {
+    await _pageTransitionController.reverse();
     setState(() {
       _showLoginPage = !_showLoginPage;
     });
+    _pageTransitionController.forward();
   }
 
   @override
   Widget build(BuildContext context) {
-    return _AuthPage(
-      key: ValueKey(_showLoginPage), // Ensures state resets on toggle
-      showLoginPage: _showLoginPage,
-      onToggle: togglePages,
+    return SlideTransition(
+      position: _slideAnimation,
+      child: FadeTransition(
+        opacity: _fadeAnimation,
+        child: _AuthPage(
+          key: ValueKey(_showLoginPage),
+          showLoginPage: _showLoginPage,
+          onToggle: togglePages,
+        ),
+      ),
     );
   }
 }
@@ -169,68 +210,82 @@ class _AuthPageState extends State<_AuthPage> with TickerProviderStateMixin {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const SizedBox(height: 40),
+                      const SizedBox(height: 20),
                       
-                      // AhamAI Logo - smaller
+                      // AhamAI Logo - more compact
                       Text(
                         'AhamAI',
                         style: GoogleFonts.spaceMono(
-                          fontSize: 36,
+                          fontSize: 32,
                           color: const Color(0xFF000000),
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
                       
                       // Simple underline - smaller
                       Container(
                         height: 2,
-                        width: 50,
+                        width: 40,
                         color: const Color(0xFF000000),
                       ),
                       
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 24),
                       
                       Text(
                         widget.showLoginPage 
                             ? 'Welcome back' 
                             : 'Create account',
                         style: GoogleFonts.inter(
-                          fontSize: 20, 
+                          fontSize: 18, 
                           color: const Color(0xFF000000),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                       
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 4),
                       
                       Text(
                         widget.showLoginPage 
                             ? 'Sign in to continue' 
                             : 'Join AhamAI today',
                         style: GoogleFonts.inter(
-                          fontSize: 14, 
+                          fontSize: 13, 
                           color: const Color(0xFFA3A3A3),
                           fontWeight: FontWeight.w400,
                         ),
                       ),
                       
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 24),
 
                       // Form with animation
                       AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 250),
-                        transitionBuilder: (child, animation) => FadeTransition(opacity: animation, child: child),
+                        duration: const Duration(milliseconds: 350),
+                        transitionBuilder: (child, animation) {
+                          return SlideTransition(
+                            position: Tween<Offset>(
+                              begin: const Offset(0.2, 0),
+                              end: Offset.zero,
+                            ).animate(CurvedAnimation(
+                              parent: animation,
+                              curve: Curves.easeOutCubic,
+                            )),
+                            child: FadeTransition(
+                              opacity: animation,
+                              child: child,
+                            ),
+                          );
+                        },
                         child: widget.showLoginPage ? _buildLoginForm() : _buildSignupForm(),
                       ),
                       
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 20),
                       
                       // Submit button - smaller
                       SizedBox(
                         width: double.infinity,
-                        height: 44,
+                        height: 42,
                         child: _isLoading
                             ? Container(
                                 decoration: BoxDecoration(
@@ -270,7 +325,7 @@ class _AuthPageState extends State<_AuthPage> with TickerProviderStateMixin {
                               ),
                       ),
                       
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 20),
 
                       // Toggle between login/signup
                       Row(
@@ -369,7 +424,7 @@ class _AuthPageState extends State<_AuthPage> with TickerProviderStateMixin {
     bool obscureText = false,
   }) {
     return Container(
-      height: 44,
+      height: 40,
       decoration: BoxDecoration(
         color: const Color(0xFFE0DED9),
         borderRadius: BorderRadius.circular(10),

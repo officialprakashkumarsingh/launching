@@ -176,6 +176,7 @@ class _ChatHistoryView extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       child: ListView.builder(
+        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
         padding: EdgeInsets.only(
           top: 8,
           bottom: kBottomNavigationBarHeight + 80,
@@ -256,6 +257,7 @@ class _SavedRepliesView extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       child: ListView.builder(
+        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
         padding: EdgeInsets.only(
           top: 8,
           bottom: kBottomNavigationBarHeight + 80,

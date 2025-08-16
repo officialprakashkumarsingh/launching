@@ -555,6 +555,7 @@ class ChatPageState extends State<ChatPage> {
               Expanded(
                 child: ListView.builder(
                   controller: _scroll,
+                  physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                   itemCount: _messages.length,
                   itemBuilder: (_, index) {

@@ -412,6 +412,7 @@ class _CharacterChatPageState extends State<CharacterChatPage> {
           Expanded(
             child: ListView.builder(
               controller: _scroll,
+              physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
               padding: const EdgeInsets.all(16),
               itemCount: _messages.length,
               itemBuilder: (context, index) {
@@ -525,6 +526,7 @@ class _CharacterChatPageState extends State<CharacterChatPage> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
                 itemCount: _characterPrompts.length,
                 itemBuilder: (context, index) {
                   return Container(
@@ -543,97 +545,95 @@ class _CharacterChatPageState extends State<CharacterChatPage> {
               ),
             ),
           
-          // Input area
+          // Input area - clean design matching home input exactly
           Container(
-            padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(
-              color: Color(0xFFF4F3F0),
+            margin: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: const Color(0xFFEAE9E5),
+                width: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24), // Changed from 30 to 24 to match homepage
-                border: Border.all(color: const Color(0xFFEAE9E5)), // Changed border color to match homepage
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end, // Added to match homepage layout
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _controller,
-                      enabled: !_awaitingReply,
-                      maxLines: 3, // Reduced from 6 to match homepage
-                      minLines: 1,
-                      textCapitalization: TextCapitalization.sentences,
-                      cursorColor: const Color(0xFF000000), // Added to match homepage
-                      textInputAction: TextInputAction.send, // Added to match homepage
-                      onSubmitted: (_) => _send(),
-                      style: GoogleFonts.inter(
-                        color: const Color(0xFF000000),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    enabled: !_awaitingReply,
+                    maxLines: 3,
+                    minLines: 1,
+                    textCapitalization: TextCapitalization.sentences,
+                    cursorColor: const Color(0xFF000000),
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: (_) => _send(),
+                    style: const TextStyle(
+                      color: Color(0xFF000000),
+                      fontSize: 16,
+                      height: 1.4,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: _awaitingReply ? '${widget.character.name} is thinking...' : 'Message ${widget.character.name}...',
+                      hintStyle: const TextStyle(
+                        color: Color(0xFFA3A3A3),
                         fontSize: 16,
-                        height: 1.4, // Added to match homepage
+                        height: 1.4,
                       ),
-                      decoration: InputDecoration(
-                        hintText: _awaitingReply ? '${widget.character.name} is thinking...' : 'Message ${widget.character.name}...',
-                        hintStyle: GoogleFonts.inter(
-                          color: const Color(0xFFA3A3A3),
-                          fontSize: 16,
-                          height: 1.4, // Added to match homepage
-                        ),
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        errorBorder: InputBorder.none,
-                        focusedErrorBorder: InputBorder.none,
-                        disabledBorder: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 12, // Reduced from 16 to match homepage
-                        ),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      errorBorder: InputBorder.none,
+                      focusedErrorBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
                       ),
                     ),
                   ),
-                  Container(
-                    margin: const EdgeInsets.only(right: 12, bottom: 6), // Changed margin to match homepage
-                    child: GestureDetector(
-                      onTap: _awaitingReply ? null : () => _send(),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.all(10), // Changed from width/height to padding to match homepage
-                        decoration: BoxDecoration(
-                          color: _controller.text.trim().isEmpty 
-                              ? const Color(0xFFE0E0E0)
-                              : const Color(0xFF000000),
-                          borderRadius: BorderRadius.circular(12), // Changed from 18 to 12 to match homepage
-                          boxShadow: _controller.text.trim().isNotEmpty
-                              ? [
-                                  BoxShadow(
-                                    color: const Color(0xFF000000).withOpacity(0.25),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ]
-                              : null,
-                        ),
-                        child: Icon(
-                          Icons.arrow_upward_rounded,
-                          color: _controller.text.trim().isEmpty 
-                              ? const Color(0xFFA3A3A3)
-                              : Colors.white,
-                          size: 18, // Reduced from default to match homepage
-                        ),
+                ),
+                Container(
+                  margin: const EdgeInsets.only(right: 12, bottom: 6),
+                  child: GestureDetector(
+                    onTap: _awaitingReply ? null : () => _send(),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: _controller.text.trim().isEmpty 
+                            ? const Color(0xFFE0E0E0)
+                            : const Color(0xFF000000),
+                        boxShadow: _controller.text.trim().isNotEmpty
+                            ? [
+                                BoxShadow(
+                                  color: const Color(0xFF000000).withOpacity(0.25),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Icon(
+                        Icons.arrow_upward_rounded,
+                        color: _controller.text.trim().isEmpty 
+                            ? const Color(0xFFA3A3A3)
+                            : Colors.white,
+                        size: 18,
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ],

@@ -154,47 +154,51 @@ class _CharactersPageState extends State<CharactersPage> with TickerProviderStat
         opacity: _fadeAnimation,
         child: Column(
           children: [
-            // Search bar
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(24), // Changed from 30 to 24 to match homepage
-                  border: Border.all(color: const Color(0xFFEAE9E5)), // Changed border color to match homepage
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08), // Increased opacity to match homepage
-                      blurRadius: 12, // Increased blur radius
-                      offset: const Offset(0, 4), // Changed offset to match homepage
-                    ),
-                  ],
+            // Search bar - clean design matching home input
+            Container(
+              margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: const Color(0xFFEAE9E5),
+                  width: 1,
                 ),
-                child: TextField(
-                  onChanged: (value) => setState(() => _searchQuery = value),
-                  style: GoogleFonts.inter(
-                    fontSize: 16, // Increased to match homepage
-                    color: const Color(0xFF000000),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
                   ),
-                  decoration: InputDecoration(
-                    hintText: 'Search characters...',
-                    hintStyle: GoogleFonts.inter(
-                      fontSize: 16, // Increased to match homepage
-                      color: const Color(0xFFA3A3A3),
-                    ),
-                    prefixIcon: const Icon(
-                      Icons.search_rounded,
-                      color: Color(0xFFA3A3A3),
-                      size: 20,
-                    ),
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    errorBorder: InputBorder.none,
-                    focusedErrorBorder: InputBorder.none,
-                    disabledBorder: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12), // Matches homepage
+                ],
+              ),
+              child: TextField(
+                onChanged: (value) => setState(() => _searchQuery = value),
+                style: const TextStyle(
+                  color: Color(0xFF000000),
+                  fontSize: 16,
+                  height: 1.4,
+                ),
+                decoration: InputDecoration(
+                  hintText: 'Search characters...',
+                  hintStyle: const TextStyle(
+                    color: Color(0xFFA3A3A3),
+                    fontSize: 16,
+                    height: 1.4,
                   ),
+                  prefixIcon: const Icon(
+                    Icons.search_rounded,
+                    color: Color(0xFFA3A3A3),
+                    size: 20,
+                  ),
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  errorBorder: InputBorder.none,
+                  focusedErrorBorder: InputBorder.none,
+                  disabledBorder: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 ),
               ),
             ),
@@ -226,6 +230,7 @@ class _CharactersPageState extends State<CharactersPage> with TickerProviderStat
                     )
                   : GridView.builder(
                       padding: const EdgeInsets.all(16),
+                      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 3, // Increased from 2 to 3 for smaller cards
                         crossAxisSpacing: 12, // Reduced spacing

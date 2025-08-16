@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/gestures.dart';
 
 import 'auth_and_profile_pages.dart';
 import 'auth_service.dart';
@@ -28,6 +29,16 @@ class AhamAIApp extends StatelessWidget {
       navigatorKey: navigatorKey,
       title: 'AhamAI',
       debugShowCheckedModeBanner: false,
+      scrollBehavior: const MaterialScrollBehavior().copyWith(
+        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+        scrollbars: false,
+        overscroll: false,
+        dragDevices: {
+          PointerDeviceKind.touch,
+          PointerDeviceKind.mouse,
+          PointerDeviceKind.trackpad,
+        },
+      ),
       theme: ThemeData(
         useMaterial3: true,
         brightness: Brightness.light,

@@ -325,7 +325,7 @@ class StockChartPainter extends CustomPainter {
 
     // Create price line path
     final pricePath = Path();
-    final gradientPath = Path();
+    final fillPath = Path();
 
     for (int i = 0; i < prices.length; i++) {
       final x = padding + (i / (prices.length - 1)) * chartWidth;
@@ -333,17 +333,17 @@ class StockChartPainter extends CustomPainter {
 
       if (i == 0) {
         pricePath.moveTo(x, y);
-        gradientPath.moveTo(x, size.height - padding);
-        gradientPath.lineTo(x, y);
+        fillPath.moveTo(x, size.height - padding);
+        fillPath.lineTo(x, y);
       } else {
         pricePath.lineTo(x, y);
-        gradientPath.lineTo(x, y);
+                  fillPath.lineTo(x, y);
       }
     }
 
-    // Complete gradient path
-    gradientPath.lineTo(padding + chartWidth, size.height - padding);
-    gradientPath.close();
+    // Complete fill path
+    fillPath.lineTo(padding + chartWidth, size.height - padding);
+    fillPath.close();
 
     // Determine trend color
     final firstPrice = prices.first;
@@ -351,19 +351,10 @@ class StockChartPainter extends CustomPainter {
     final isUpTrend = lastPrice >= firstPrice;
     
     final trendColor = isUpTrend ? Colors.green.shade600 : Colors.red.shade600;
-    final gradientColor = isUpTrend ? Colors.green.shade100 : Colors.red.shade100;
 
-    // Draw gradient fill
-    fillPaint.shader = LinearGradient(
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
-      colors: [
-        gradientColor.withOpacity(0.3),
-        gradientColor.withOpacity(0.05),
-      ],
-    ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-    
-    canvas.drawPath(gradientPath, fillPaint);
+    // Draw simple solid fill instead of gradient
+    fillPaint.color = (isUpTrend ? Colors.green : Colors.red).withOpacity(0.1);
+    canvas.drawPath(fillPath, fillPaint);
 
     // Draw price line
     paint.color = trendColor;

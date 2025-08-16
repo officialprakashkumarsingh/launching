@@ -280,7 +280,7 @@ class _MessageBubbleState extends State<MessageBubble> with TickerProviderStateM
                     ),
                     _buildModifyOption(
                       context,
-                      icon: Icons.psychology_outlined,
+                      icon: Icons.settings_outlined,
                       title: 'Technical Deep Dive',
                       subtitle: 'Add technical details and explanations',
                       onTap: () => _handleModifyOption(context, 'technical'),
