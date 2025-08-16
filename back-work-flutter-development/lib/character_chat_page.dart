@@ -189,16 +189,34 @@ class _CharacterChatPageState extends State<CharacterChatPage> {
       // Final update when streaming is complete
       if (mounted && _awaitingReply) {
         setState(() {
-          _messages[botMessageIndex] = _messages[botMessageIndex].copyWith(isStreaming: false);
+          _messages[botMessageIndex] = _messages[botMessageIndex].copyWith(
+            text: accumulatedText, // Ensure text is set
+            isStreaming: false,
+          );
           _awaitingReply = false;
         });
+        
+        // Force a rebuild after a brief delay to ensure UI updates
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            setState(() {});
+          }
+        });
+        
         _saveCurrentChat();
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _messages.last = Message.bot('Failed to generate response: $e');
+          _messages[_messages.length - 1] = Message.bot('Failed to generate response: $e');
           _awaitingReply = false;
+        });
+        
+        // Force UI update
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            setState(() {});
+          }
         });
       }
     }

@@ -780,53 +780,12 @@ class _AnimatedCharactersCardState extends State<_AnimatedCharactersCard>
               height: 60,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               decoration: BoxDecoration(
-                color: const Color(0xFFEAE9E5),
+                // Remove background color
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Stack(
                 children: [
-                  // Real person avatars
-                  ...List.generate(3, (index) {
-                    return Positioned(
-                      left: 25.0 + (index * 35.0) + (_floatingAnimations[index].value.dx * 30),
-                      top: 8.0 + (_floatingAnimations[index].value.dy * 15),
-                      child: Transform.scale(
-                        scale: _scaleAnimation.value * (0.7 + index * 0.1),
-                        child: Container(
-                          width: 24,
-                          height: 24,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.white, width: 1.5),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(10.5),
-                            child: Image.network(
-                              _getAvatarUrl(index),
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  color: _getElementColor(index),
-                                  child: Icon(
-                                    Icons.person,
-                                    size: 12,
-                                    color: Colors.white,
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  }),
+                  // Remove the Real person avatars section completely
                   
                   // Main content
                   Row(
@@ -842,9 +801,9 @@ class _AnimatedCharactersCardState extends State<_AnimatedCharactersCard>
                       const SizedBox(width: 16),
                       const Expanded(
                         child: Text(
-                          'Characters',
+                          'Chat With Characters',
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 14, // Smaller font size
                             fontWeight: FontWeight.w500,
                             color: Color(0xFF000000),
                           ),
@@ -866,26 +825,7 @@ class _AnimatedCharactersCardState extends State<_AnimatedCharactersCard>
     );
   }
   
-  String _getAvatarUrl(int index) {
-    final avatars = [
-      'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRr59hvp--gFBL8slfLamVCq24h1CsmWl8f3A&usqp=CAU',
-      'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSfxuhAwlzkECahuuU59Eznv-6VJIoLKfDeptOIaGdPIUphURWVSHS-j7k&s=10',
-      'https://5.imimg.com/data5/ANDROID/Default/2023/3/MV/BO/HY/186207530/product-jpeg.jpg',
-    ];
-    return avatars[index % avatars.length];
-  }
-  
-  Color _getElementColor(int index) {
-    final colors = [
-      const Color(0xFFD0CFCB).withOpacity(0.3),
-      const Color(0xFFA3A3A3).withOpacity(0.2),
-      const Color(0xFF000000).withOpacity(0.1),
-      const Color(0xFFD0CFCB).withOpacity(0.4),
-      const Color(0xFFA3A3A3).withOpacity(0.3),
-      const Color(0xFF000000).withOpacity(0.15),
-    ];
-    return colors[index % colors.length];
-  }
+
 }
 
 /* ----------------------------------------------------------
