@@ -160,26 +160,26 @@ class _CharactersPageState extends State<CharactersPage> with TickerProviderStat
               child: Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(30),
-                  border: Border.all(color: const Color(0xFFE0E0E0)),
+                  borderRadius: BorderRadius.circular(24), // Changed from 30 to 24 to match homepage
+                  border: Border.all(color: const Color(0xFFEAE9E5)), // Changed border color to match homepage
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
+                      color: Colors.black.withOpacity(0.08), // Increased opacity to match homepage
+                      blurRadius: 12, // Increased blur radius
+                      offset: const Offset(0, 4), // Changed offset to match homepage
                     ),
                   ],
                 ),
                 child: TextField(
                   onChanged: (value) => setState(() => _searchQuery = value),
                   style: GoogleFonts.inter(
-                    fontSize: 14,
+                    fontSize: 16, // Increased to match homepage
                     color: const Color(0xFF000000),
                   ),
                   decoration: InputDecoration(
                     hintText: 'Search characters...',
                     hintStyle: GoogleFonts.inter(
-                      fontSize: 14,
+                      fontSize: 16, // Increased to match homepage
                       color: const Color(0xFFA3A3A3),
                     ),
                     prefixIcon: const Icon(
@@ -188,7 +188,12 @@ class _CharactersPageState extends State<CharactersPage> with TickerProviderStat
                       size: 20,
                     ),
                     border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    errorBorder: InputBorder.none,
+                    focusedErrorBorder: InputBorder.none,
+                    disabledBorder: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12), // Matches homepage
                   ),
                 ),
               ),
@@ -222,10 +227,10 @@ class _CharactersPageState extends State<CharactersPage> with TickerProviderStat
                   : GridView.builder(
                       padding: const EdgeInsets.all(16),
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 16,
-                        mainAxisSpacing: 16,
-                        childAspectRatio: 0.75,
+                        crossAxisCount: 3, // Increased from 2 to 3 for smaller cards
+                        crossAxisSpacing: 12, // Reduced spacing
+                        mainAxisSpacing: 12, // Reduced spacing
+                        childAspectRatio: 0.85, // Adjusted ratio for better proportions
                       ),
                       itemCount: characters.length,
                       itemBuilder: (context, index) {
@@ -247,30 +252,31 @@ class _CharactersPageState extends State<CharactersPage> with TickerProviderStat
       child: Container(
         decoration: BoxDecoration(
           color: const Color(0xFFEAE9E5),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFC4C4C4).withOpacity(0.3)),
+          borderRadius: BorderRadius.circular(16), // Increased border radius for modern look
+          border: Border.all(color: const Color(0xFFC4C4C4).withOpacity(0.2)), // Reduced opacity
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 6,
+              color: Colors.black.withOpacity(0.04), // Reduced shadow for cleaner look
+              blurRadius: 8, // Increased blur
               offset: const Offset(0, 2),
             ),
           ],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.all(12), // Slightly increased padding
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.center, // Center content
             children: [
-              // Avatar
+              // Avatar - made smaller and more compact
               Container(
-                width: 40,
-                height: 40,
+                width: 32, // Reduced from 40
+                height: 32, // Reduced from 40
                 decoration: BoxDecoration(
                   color: const Color(0xFF000000),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(16), // Adjusted for new size
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(16),
                   child: character.avatarUrl.isNotEmpty
                       ? Image.network(
                           character.avatarUrl,
@@ -280,7 +286,7 @@ class _CharactersPageState extends State<CharactersPage> with TickerProviderStat
                               character.name.isNotEmpty ? character.name[0].toUpperCase() : 'C',
                               style: GoogleFonts.inter(
                                 color: Colors.white,
-                                fontSize: 18,
+                                fontSize: 14, // Reduced from 18
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -291,7 +297,7 @@ class _CharactersPageState extends State<CharactersPage> with TickerProviderStat
                             character.name.isNotEmpty ? character.name[0].toUpperCase() : 'C',
                             style: GoogleFonts.inter(
                               color: Colors.white,
-                              fontSize: 18,
+                              fontSize: 14, // Reduced from 18
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -301,11 +307,11 @@ class _CharactersPageState extends State<CharactersPage> with TickerProviderStat
               
               const SizedBox(height: 8),
               
-              // Name
+              // Name - made more compact
               Text(
                 character.name,
                 style: GoogleFonts.inter(
-                  fontSize: 14,
+                  fontSize: 12, // Reduced from 14
                   fontWeight: FontWeight.w600,
                   color: const Color(0xFF000000),
                 ),
@@ -316,16 +322,16 @@ class _CharactersPageState extends State<CharactersPage> with TickerProviderStat
               
               const SizedBox(height: 4),
               
-              // Description
+              // Description - made more compact
               Expanded(
                 child: Text(
                   character.description,
                   style: GoogleFonts.inter(
-                    fontSize: 11,
+                    fontSize: 10, // Reduced from 11
                     color: const Color(0xFFA3A3A3),
-                    height: 1.3,
+                    height: 1.2, // Reduced line height
                   ),
-                  maxLines: 3,
+                  maxLines: 2, // Reduced from 3
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
                 ),

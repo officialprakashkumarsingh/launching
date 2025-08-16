@@ -552,8 +552,8 @@ class _CharacterChatPageState extends State<CharacterChatPage> {
             child: Container(
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(30),
-                border: Border.all(color: const Color(0xFFE0E0E0)),
+                borderRadius: BorderRadius.circular(24), // Changed from 30 to 24 to match homepage
+                border: Border.all(color: const Color(0xFFEAE9E5)), // Changed border color to match homepage
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.08),
@@ -563,46 +563,55 @@ class _CharacterChatPageState extends State<CharacterChatPage> {
                 ],
               ),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end, // Added to match homepage layout
                 children: [
                   Expanded(
                     child: TextField(
                       controller: _controller,
                       enabled: !_awaitingReply,
+                      maxLines: 3, // Reduced from 6 to match homepage
+                      minLines: 1,
+                      textCapitalization: TextCapitalization.sentences,
+                      cursorColor: const Color(0xFF000000), // Added to match homepage
+                      textInputAction: TextInputAction.send, // Added to match homepage
+                      onSubmitted: (_) => _send(),
+                      style: GoogleFonts.inter(
+                        color: const Color(0xFF000000),
+                        fontSize: 16,
+                        height: 1.4, // Added to match homepage
+                      ),
                       decoration: InputDecoration(
                         hintText: _awaitingReply ? '${widget.character.name} is thinking...' : 'Message ${widget.character.name}...',
                         hintStyle: GoogleFonts.inter(
                           color: const Color(0xFFA3A3A3),
                           fontSize: 16,
+                          height: 1.4, // Added to match homepage
                         ),
                         border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        errorBorder: InputBorder.none,
+                        focusedErrorBorder: InputBorder.none,
+                        disabledBorder: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 20,
-                          vertical: 16,
+                          vertical: 12, // Reduced from 16 to match homepage
                         ),
                       ),
-                      style: GoogleFonts.inter(
-                        color: const Color(0xFF000000),
-                        fontSize: 16,
-                      ),
-                      maxLines: 6,
-                      minLines: 1,
-                      textCapitalization: TextCapitalization.sentences,
-                      onSubmitted: (_) => _send(),
                     ),
                   ),
                   Container(
-                    margin: const EdgeInsets.only(right: 8, bottom: 8),
+                    margin: const EdgeInsets.only(right: 12, bottom: 6), // Changed margin to match homepage
                     child: GestureDetector(
                       onTap: _awaitingReply ? null : () => _send(),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
-                        width: 36,
-                        height: 36,
+                        padding: const EdgeInsets.all(10), // Changed from width/height to padding to match homepage
                         decoration: BoxDecoration(
                           color: _controller.text.trim().isEmpty 
                               ? const Color(0xFFE0E0E0)
                               : const Color(0xFF000000),
-                          borderRadius: BorderRadius.circular(18),
+                          borderRadius: BorderRadius.circular(12), // Changed from 18 to 12 to match homepage
                           boxShadow: _controller.text.trim().isNotEmpty
                               ? [
                                   BoxShadow(
@@ -618,7 +627,7 @@ class _CharacterChatPageState extends State<CharacterChatPage> {
                           color: _controller.text.trim().isEmpty 
                               ? const Color(0xFFA3A3A3)
                               : Colors.white,
-                          size: 20,
+                          size: 18, // Reduced from default to match homepage
                         ),
                       ),
                     ),
