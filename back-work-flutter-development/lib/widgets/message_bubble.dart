@@ -15,9 +15,8 @@ class MessageBubble extends StatefulWidget {
   final VoidCallback? onUserMessageTap;
   final Widget Function(Message) messageContentBuilder;
   final Function(String modifyType)? onModifyResponse;
+  final Function(String messageId, String threadName)? onCreateThread;
 
-
-  
   const MessageBubble({
     super.key,
     required this.message,
@@ -25,6 +24,7 @@ class MessageBubble extends StatefulWidget {
     this.onUserMessageTap,
     required this.messageContentBuilder,
     this.onModifyResponse,
+    this.onCreateThread,
   });
 
   @override
@@ -449,6 +449,111 @@ class _MessageBubbleState extends State<MessageBubble> with TickerProviderStateM
     }
   }
 
+  void _showCreateThreadDialog(BuildContext context) {
+    HapticFeedback.lightImpact();
+    _toggleActions(); // Hide actions first
+    
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Row(
+          children: [
+            const Icon(
+              Icons.alt_route_outlined,
+              color: Color(0xFF000000),
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              'Create Thread',
+              style: TextStyle(
+                color: Color(0xFF000000),
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Start a new conversation thread from this message. Give it a descriptive name:',
+              style: TextStyle(
+                color: Color(0xFF333333),
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              decoration: InputDecoration(
+                hintText: 'e.g., "Python Solution", "Alternative Approach"',
+                filled: true,
+                fillColor: const Color(0xFFF4F3F0),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              ),
+              style: const TextStyle(
+                color: Color(0xFF000000),
+                fontSize: 14,
+              ),
+              maxLength: 50,
+              buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
+              autofocus: true,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                color: Color(0xFF666666),
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final threadName = controller.text.trim();
+              if (threadName.isNotEmpty) {
+                Navigator.pop(context);
+                widget.onCreateThread?.call(widget.message.id, threadName);
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF000000),
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text(
+              'Create',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildImageWidget(String url) {
     try {
       Widget image;
@@ -653,6 +758,15 @@ class _MessageBubbleState extends State<MessageBubble> with TickerProviderStateM
                         onTap: () => _shareMessage(context),
                         tooltip: 'Share response',
                       ),
+                      // Thread (only show if callback provided and message can create thread)
+                      if (widget.onCreateThread != null && widget.message.canCreateThread) ...[
+                        const SizedBox(width: 8),
+                        ActionButton(
+                          icon: Icons.alt_route_outlined,
+                          onTap: () => _showCreateThreadDialog(context),
+                          tooltip: 'Create thread',
+                        ),
+                      ],
                     ],
                   ),
                 ),

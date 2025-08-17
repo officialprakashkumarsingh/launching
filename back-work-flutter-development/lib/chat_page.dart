@@ -13,6 +13,7 @@ import 'widgets/input_bar.dart';
 import 'widgets/message_bubble.dart';
 import 'widgets/enhanced_code_block.dart';
 import 'widgets/custom_markdown_code_builder.dart';
+import 'widgets/thread_selector.dart';
 
 
 import 'services/message_modifier_service.dart';
@@ -52,6 +53,10 @@ class ChatPageState extends State<ChatPage> {
   bool _showQueuePanel = true; // Default to compact view
   final MessageQueue _messageQueue = MessageQueue();
   
+  // Threading support
+  late ChatSession _chatSession;
+  bool _showThreadSelector = false;
+  
 
 
 
@@ -66,6 +71,11 @@ class ChatPageState extends State<ChatPage> {
   @override
   void initState() {
     super.initState();
+    // Initialize chat session
+    _chatSession = ChatSession(
+      title: 'Main Chat',
+      messages: _messages,
+    );
     _characterService.addListener(_onCharacterChanged);
     _updateGreetingForCharacter();
     _controller.addListener(() {
@@ -81,13 +91,15 @@ class ChatPageState extends State<ChatPage> {
     super.dispose();
   }
 
-  List<Message> getMessages() => _messages;
+  List<Message> getMessages() => _chatSession.currentMessages;
 
   void loadChatSession(List<Message> messages) {
     setState(() {
       _awaitingReply = false;
-      _messages.clear();
-      _messages.addAll(messages);
+      _chatSession = ChatSession(
+        title: 'Loaded Chat',
+        messages: messages,
+      );
     });
   }
 
@@ -97,17 +109,108 @@ class ChatPageState extends State<ChatPage> {
     }
   }
 
+  // Threading methods
+  void _createThread(String parentMessageId, String threadName) {
+    setState(() {
+      _chatSession = _chatSession.createThread(parentMessageId, threadName);
+    });
+    
+    // Show success message
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '✨ Created thread "$threadName"',
+          style: const TextStyle(
+            color: Color(0xFF000000),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        backgroundColor: Colors.white,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+        elevation: 4,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _switchToMainThread() {
+    setState(() {
+      _chatSession = _chatSession.switchThread(null);
+      _showThreadSelector = false;
+    });
+  }
+
+  void _switchToThread(String threadId) {
+    setState(() {
+      _chatSession = _chatSession.switchThread(threadId);
+      _showThreadSelector = false;
+    });
+  }
+
+  void _renameThread(String threadId, String newName) {
+    final thread = _chatSession.threads[threadId];
+    if (thread != null) {
+      final updatedThread = thread.copyWith(name: newName);
+      final newThreads = Map<String, MessageThread>.from(_chatSession.threads);
+      newThreads[threadId] = updatedThread;
+      
+      setState(() {
+        _chatSession = ChatSession(
+          title: _chatSession.title,
+          messages: _chatSession.messages,
+          threads: newThreads,
+          currentThreadId: _chatSession.currentThreadId,
+        );
+      });
+    }
+  }
+
+  void _deleteThread(String threadId) {
+    final newThreads = Map<String, MessageThread>.from(_chatSession.threads);
+    newThreads.remove(threadId);
+    
+    // Remove messages from this thread
+    final newMessages = _chatSession.messages
+        .where((message) => message.threadId != threadId)
+        .toList();
+    
+    setState(() {
+      _chatSession = ChatSession(
+        title: _chatSession.title,
+        messages: newMessages,
+        threads: newThreads,
+        currentThreadId: _chatSession.currentThreadId == threadId ? null : _chatSession.currentThreadId,
+      );
+    });
+  }
+
+  void _toggleThreadSelector() {
+    setState(() {
+      _showThreadSelector = !_showThreadSelector;
+    });
+  }
+
 
 
   void _updateGreetingForCharacter() {
     final selectedCharacter = _characterService.selectedCharacter;
     setState(() {
-      if (_messages.isNotEmpty && _messages.first.sender == Sender.bot && _messages.length == 1) {
-        if (selectedCharacter != null) {
-          _messages.first = Message.bot('Hello! I\'m ${selectedCharacter.name}. ${selectedCharacter.description}. How can I help you today?');
-        } else {
-          _messages.first = Message.bot('Hi, I\'m AhamAI. Ask me anything!');
-        }
+      final currentMessages = _chatSession.currentMessages;
+              if (currentMessages.isNotEmpty && currentMessages.first.sender == Sender.bot && currentMessages.length == 1) {
+          final greetingMessage = selectedCharacter != null
+              ? Message.bot('Hello! I\'m ${selectedCharacter.name}. ${selectedCharacter.description}. How can I help you today?')
+              : Message.bot('Hi, I\'m AhamAI. Ask me anything!');
+          
+          final newMessages = List<Message>.from(_chatSession.messages);
+          newMessages[0] = greetingMessage;
+          _chatSession = ChatSession(
+            title: _chatSession.title,
+            messages: newMessages,
+            threads: _chatSession.threads,
+            currentThreadId: _chatSession.currentThreadId,
+          );
       }
     });
   }
@@ -192,9 +295,11 @@ class ChatPageState extends State<ChatPage> {
       );
 
       // Create bot message placeholder
-      final botMessage = Message.bot('');
-      setState(() => _messages.add(botMessage));
-      final botMessageIndex = _messages.length - 1;
+      final botMessage = Message.bot('', threadId: _chatSession.currentThreadId);
+      setState(() {
+        _chatSession = _chatSession.addMessage(botMessage);
+      });
+      final botMessageIndex = _chatSession.currentMessages.length - 1;
 
       String accumulatedText = '';
       await for (final content in responseStream) {
@@ -202,12 +307,22 @@ class ChatPageState extends State<ChatPage> {
 
         accumulatedText += AIChatService.fixServerEncoding(content);
         setState(() {
-          _messages[botMessageIndex] = _messages[botMessageIndex].copyWith(
-            text: accumulatedText,
-            isStreaming: true,
-            displayText: accumulatedText,
-            codes: [], // Clear codes during streaming to prevent duplication
-          );
+          final newMessages = List<Message>.from(_chatSession.messages);
+          final actualIndex = newMessages.indexWhere((m) => m.id == botMessage.id);
+          if (actualIndex >= 0) {
+            newMessages[actualIndex] = newMessages[actualIndex].copyWith(
+              text: accumulatedText,
+              isStreaming: true,
+              displayText: accumulatedText,
+              codes: [], // Clear codes during streaming to prevent duplication
+            );
+            _chatSession = ChatSession(
+              title: _chatSession.title,
+              messages: newMessages,
+              threads: _chatSession.threads,
+              currentThreadId: _chatSession.currentThreadId,
+            );
+          }
         });
         _scrollToBottom();
       }
@@ -215,7 +330,17 @@ class ChatPageState extends State<ChatPage> {
       // Final update when streaming is complete
       if (mounted && _awaitingReply) {
         setState(() {
-          _messages[botMessageIndex] = _messages[botMessageIndex].copyWith(isStreaming: false);
+          final newMessages = List<Message>.from(_chatSession.messages);
+          final actualIndex = newMessages.indexWhere((m) => m.id == botMessage.id);
+          if (actualIndex >= 0) {
+            newMessages[actualIndex] = newMessages[actualIndex].copyWith(isStreaming: false);
+            _chatSession = ChatSession(
+              title: _chatSession.title,
+              messages: newMessages,
+              threads: _chatSession.threads,
+              currentThreadId: _chatSession.currentThreadId,
+            );
+          }
           _awaitingReply = false;
         });
 
@@ -248,41 +373,73 @@ class ChatPageState extends State<ChatPage> {
 
 
   void _regenerateResponse(int botMessageIndex) {
+    final currentMessages = _chatSession.currentMessages;
     int userMessageIndex = botMessageIndex - 1;
-    if (userMessageIndex >= 0 && _messages[userMessageIndex].sender == Sender.user) {
-      String lastUserPrompt = _messages[userMessageIndex].text;
-      setState(() => _messages.removeAt(botMessageIndex));
+    if (userMessageIndex >= 0 && currentMessages[userMessageIndex].sender == Sender.user) {
+      String lastUserPrompt = currentMessages[userMessageIndex].text;
+      setState(() {
+        final newMessages = List<Message>.from(_chatSession.messages);
+        final messageToRemove = currentMessages[botMessageIndex];
+        newMessages.removeWhere((m) => m.id == messageToRemove.id);
+        _chatSession = ChatSession(
+          title: _chatSession.title,
+          messages: newMessages,
+          threads: _chatSession.threads,
+          currentThreadId: _chatSession.currentThreadId,
+        );
+      });
       _generateResponse(lastUserPrompt);
     }
   }
 
   void _modifyResponse(int botMessageIndex, String modifyType) {
-    if (botMessageIndex < 0 || botMessageIndex >= _messages.length) return;
+    final currentMessages = _chatSession.currentMessages;
+    if (botMessageIndex < 0 || botMessageIndex >= currentMessages.length) return;
     
-    final botMessage = _messages[botMessageIndex];
+    final botMessage = currentMessages[botMessageIndex];
     if (botMessage.sender != Sender.bot || botMessage.isStreaming) return;
 
     // Get the original user message
     int userMessageIndex = botMessageIndex - 1;
-    if (userMessageIndex < 0 || _messages[userMessageIndex].sender != Sender.user) return;
+    if (userMessageIndex < 0 || currentMessages[userMessageIndex].sender != Sender.user) return;
     
     final modifiedPrompt = MessageModifierService.createModificationPrompt(
-      _messages[userMessageIndex].text,
+      currentMessages[userMessageIndex].text,
       botMessage.text,
       modifyType,
     );
 
     // Remove the old bot response and generate a new one
-    setState(() => _messages.removeAt(botMessageIndex));
+    setState(() {
+      final newMessages = List<Message>.from(_chatSession.messages);
+      newMessages.removeWhere((m) => m.id == botMessage.id);
+      _chatSession = ChatSession(
+        title: _chatSession.title,
+        messages: newMessages,
+        threads: _chatSession.threads,
+        currentThreadId: _chatSession.currentThreadId,
+      );
+    });
     _generateResponse(modifiedPrompt);
   }
   
   void _stopGeneration() {
     if(mounted) {
       setState(() {
-        if (_awaitingReply && _messages.isNotEmpty && _messages.last.isStreaming) {
-           final lastIndex = _messages.length - 1;
-           _messages[lastIndex] = _messages.last.copyWith(isStreaming: false);
+        final currentMessages = _chatSession.currentMessages;
+        if (_awaitingReply && currentMessages.isNotEmpty && currentMessages.last.isStreaming) {
+           final newMessages = List<Message>.from(_chatSession.messages);
+           final lastStreamingMessage = currentMessages.last;
+           final lastIndex = newMessages.indexWhere((m) => m.id == lastStreamingMessage.id);
+           if (lastIndex >= 0) {
+             newMessages[lastIndex] = lastStreamingMessage.copyWith(isStreaming: false);
+             _chatSession = ChatSession(
+               title: _chatSession.title,
+               messages: newMessages,
+               threads: _chatSession.threads,
+               currentThreadId: _chatSession.currentThreadId,
+             );
+           }
         }
         _awaitingReply = false;
       });
@@ -307,7 +464,7 @@ class ChatPageState extends State<ChatPage> {
 
   void _sendMessageDirectly(String messageText) {
     setState(() {
-      _messages.add(Message.user(messageText));
+      _chatSession = _chatSession.addMessage(Message.user(messageText, threadId: _chatSession.currentThreadId));
     });
     _generateResponse(messageText);
     _scrollToBottom();
@@ -318,13 +475,14 @@ class ChatPageState extends State<ChatPage> {
       _awaitingReply = false;
       _editingMessageId = null;
       _conversationMemory.clear(); // Clear memory for fresh start
-      _messages.clear();
       final selectedCharacter = _characterService.selectedCharacter;
-      if (selectedCharacter != null) {
-        _messages.add(Message.bot('Fresh chat started with ${selectedCharacter.name}. How can I help?'));
-      } else {
-        _messages.add(Message.bot('Hi, I\'m AhamAI. Ask me anything!'));
-      }
+      final greetingMessage = selectedCharacter != null 
+          ? Message.bot('Fresh chat started with ${selectedCharacter.name}. How can I help?')
+          : Message.bot('Hi, I\'m AhamAI. Ask me anything!');
+      _chatSession = ChatSession(
+        title: 'Main Chat',
+        messages: [greetingMessage],
+      );
     });
   }
 
@@ -355,17 +513,23 @@ class ChatPageState extends State<ChatPage> {
 
     final isEditing = _editingMessageId != null;
     if (isEditing) {
-      final messageIndex = _messages.indexWhere((m) => m.id == _editingMessageId);
+      final messageIndex = _chatSession.messages.indexWhere((m) => m.id == _editingMessageId);
       if (messageIndex != -1) {
         setState(() {
-          _messages.removeRange(messageIndex, _messages.length);
+          final newMessages = _chatSession.messages.take(messageIndex).toList();
+          _chatSession = ChatSession(
+            title: _chatSession.title,
+            messages: newMessages,
+            threads: _chatSession.threads,
+            currentThreadId: _chatSession.currentThreadId,
+          );
         });
       }
     }
     
     _controller.clear();
     setState(() {
-      _messages.add(Message.user(messageText));
+      _chatSession = _chatSession.addMessage(Message.user(messageText, threadId: _chatSession.currentThreadId));
       _editingMessageId = null;
     });
 
@@ -516,9 +680,9 @@ class ChatPageState extends State<ChatPage> {
         });
         
         // Add image message to chat
-        final imageMessage = Message.user("📷 Image uploaded: ${pickedFile.name}");
+        final imageMessage = Message.user("📷 Image uploaded: ${pickedFile.name}", threadId: _chatSession.currentThreadId);
         setState(() {
-          _messages.add(imageMessage);
+          _chatSession = _chatSession.addMessage(imageMessage);
         });
         
         _scrollToBottom();
@@ -545,26 +709,109 @@ class ChatPageState extends State<ChatPage> {
 
   @override
   Widget build(BuildContext context) {
-    final emptyChat = _messages.length <= 1;
+    final currentMessages = _chatSession.currentMessages;
+    final emptyChat = currentMessages.length <= 1;
     return Stack(
       children: [
-        Container(
-          color: const Color(0xFFF4F3F0),
-          child: Column(
-            children: [
-              Expanded(
-                child: ListView.builder(
-                  controller: _scroll,
-                  physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  itemCount: _messages.length,
-                  itemBuilder: (_, index) {
-                    final message = _messages[index];
-                    return MessageBubble(
-                      key: ValueKey(message.id),
-                      message: message,
-                      onRegenerate: () => _regenerateResponse(index),
-                      onUserMessageTap: () => _showUserMessageOptions(context, message),
+        Column(
+          children: [
+            // Thread selector (collapsible)
+            if (_showThreadSelector || _chatSession.threads.isNotEmpty)
+              Container(
+                constraints: BoxConstraints(
+                  maxHeight: _showThreadSelector ? 300 : 60,
+                ),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                  height: _showThreadSelector ? null : 60,
+                  child: _showThreadSelector
+                      ? ThreadSelector(
+                          threads: _chatSession.availableThreads,
+                          currentThreadId: _chatSession.currentThreadId,
+                          onMainThreadTap: _switchToMainThread,
+                          onThreadTap: _switchToThread,
+                          onThreadRename: _renameThread,
+                          onThreadDelete: _deleteThread,
+                        )
+                      : Container(
+                          height: 60,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFF4F3F0),
+                            border: Border(
+                              bottom: BorderSide(
+                                color: Color(0xFFE0DED9),
+                                width: 1,
+                              ),
+                            ),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  _chatSession.isMainThread ? Icons.home_outlined : Icons.alt_route_outlined,
+                                  color: const Color(0xFF000000),
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    _chatSession.isMainThread 
+                                        ? 'Main Chat' 
+                                        : _chatSession.currentThread?.name ?? 'Thread',
+                                    style: const TextStyle(
+                                      color: Color(0xFF000000),
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                if (_chatSession.threads.isNotEmpty)
+                                  GestureDetector(
+                                    onTap: _toggleThreadSelector,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFEAE9E5),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Icon(
+                                        _showThreadSelector 
+                                            ? Icons.expand_less_rounded 
+                                            : Icons.expand_more_rounded,
+                                        color: const Color(0xFF000000),
+                                        size: 20,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                ),
+              ),
+            
+            // Chat content
+            Expanded(
+              child: Container(
+                color: const Color(0xFFF4F3F0),
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: ListView.builder(
+                        controller: _scroll,
+                        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                        itemCount: currentMessages.length,
+                        itemBuilder: (_, index) {
+                          final message = currentMessages[index];
+                          return MessageBubble(
+                            key: ValueKey(message.id),
+                            message: message,
+                            onRegenerate: () => _regenerateResponse(index),
+                            onUserMessageTap: () => _showUserMessageOptions(context, message),
+                            onCreateThread: _createThread,
                       onModifyResponse: (modifyType) => _modifyResponse(index, modifyType),
 
                       
@@ -681,11 +928,13 @@ class ChatPageState extends State<ChatPage> {
               onImageUpload: _handleImageUpload,
               uploadedImagePath: _uploadedImagePath,
               onClearImage: _clearUploadedImage,
-            ),
-          ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
-        ),
         // Queue Panel - positioned just above input area
         Positioned(
           bottom: 100, // Just above the input area

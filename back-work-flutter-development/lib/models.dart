@@ -28,6 +28,11 @@ class Message {
   final List<CodeContent> codes;
   final String displayText; // Text without thought and code content
   final Map<String, dynamic> toolData; // External tools data
+  
+  // Threading support
+  final String? threadId; // null for main thread, unique ID for branches
+  final String? parentMessageId; // ID of message this thread branched from
+  final String? threadName; // Custom name for the thread
 
   Message({
     required this.id,
@@ -39,19 +44,24 @@ class Message {
     this.codes = const [],
     String? displayText,
     this.toolData = const {},
+    this.threadId,
+    this.parentMessageId,
+    this.threadName,
   }) : displayText = displayText ?? text;
 
-  factory Message.user(String text) {
+  factory Message.user(String text, {String? threadId, String? parentMessageId}) {
     final timestamp = DateTime.now();
     return Message(
       id: 'user_${timestamp.toIso8601String()}',
       sender: Sender.user,
       text: text,
       timestamp: timestamp,
+      threadId: threadId,
+      parentMessageId: parentMessageId,
     );
   }
 
-  factory Message.bot(String text, {bool isStreaming = false, Map<String, dynamic>? toolData}) {
+  factory Message.bot(String text, {bool isStreaming = false, Map<String, dynamic>? toolData, String? threadId, String? parentMessageId}) {
     final timestamp = DateTime.now();
     final result = _parseContent(text);
     return Message(
@@ -64,6 +74,8 @@ class Message {
       codes: result['codes'],
       displayText: result['displayText'],
       toolData: toolData ?? {},
+      threadId: threadId,
+      parentMessageId: parentMessageId,
     );
   }
 
@@ -77,6 +89,9 @@ class Message {
     List<CodeContent>? codes,
     String? displayText,
     Map<String, dynamic>? toolData,
+    String? threadId,
+    String? parentMessageId,
+    String? threadName,
   }) {
     final newText = text ?? this.text;
     final newDisplayText = displayText ?? (text != null ? null : this.displayText);
@@ -96,6 +111,9 @@ class Message {
         codes: codes ?? result['codes'],
         displayText: result['displayText'],
         toolData: toolData ?? this.toolData,
+        threadId: threadId ?? this.threadId,
+        parentMessageId: parentMessageId ?? this.parentMessageId,
+        threadName: threadName ?? this.threadName,
       );
     }
     
@@ -109,8 +127,17 @@ class Message {
       codes: codes ?? this.codes,
       displayText: newDisplayText ?? this.displayText,
       toolData: toolData ?? this.toolData,
+      threadId: threadId ?? this.threadId,
+      parentMessageId: parentMessageId ?? this.parentMessageId,
+      threadName: threadName ?? this.threadName,
     );
   }
+
+  // Check if this message is in main thread
+  bool get isMainThread => threadId == null;
+  
+  // Check if this message can have threads created from it
+  bool get canCreateThread => sender == Sender.bot && !isStreaming;
 
   // Parse thoughts and code from text and separate them from display text
   static Map<String, dynamic> _parseContent(String text) {
@@ -448,11 +475,164 @@ class Message {
 
 }
 
+// Thread information for organizing conversations
+class MessageThread {
+  final String id;
+  final String name;
+  final String parentMessageId;
+  final DateTime createdAt;
+  final int messageCount;
+
+  MessageThread({
+    required this.id,
+    required this.name,
+    required this.parentMessageId,
+    required this.createdAt,
+    this.messageCount = 0,
+  });
+
+  MessageThread copyWith({
+    String? id,
+    String? name,
+    String? parentMessageId,
+    DateTime? createdAt,
+    int? messageCount,
+  }) {
+    return MessageThread(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      parentMessageId: parentMessageId ?? this.parentMessageId,
+      createdAt: createdAt ?? this.createdAt,
+      messageCount: messageCount ?? this.messageCount,
+    );
+  }
+}
+
 class ChatSession {
   final String title;
   final List<Message> messages;
+  final Map<String, MessageThread> threads; // threadId -> thread info
+  final String? currentThreadId; // null for main thread
 
-  ChatSession({required this.title, required this.messages});
+  ChatSession({
+    required this.title, 
+    required this.messages,
+    this.threads = const {},
+    this.currentThreadId,
+  });
+
+  // Get messages for current thread
+  List<Message> get currentMessages {
+    if (currentThreadId == null) {
+      // Main thread: messages without threadId or up to the branching point
+      final result = <Message>[];
+      for (final message in messages) {
+        if (message.threadId == null) {
+          result.add(message);
+        } else {
+          // Stop at first threaded message
+          break;
+        }
+      }
+      return result;
+    } else {
+      // Specific thread: main messages + thread messages
+      final result = <Message>[];
+      final thread = threads[currentThreadId];
+      if (thread == null) return result;
+      
+      // Add main messages up to branching point
+      for (final message in messages) {
+        if (message.threadId == null) {
+          result.add(message);
+          if (message.id == thread.parentMessageId) {
+            break;
+          }
+        }
+      }
+      
+      // Add thread messages
+      result.addAll(messages.where((m) => m.threadId == currentThreadId));
+      return result;
+    }
+  }
+
+  // Get available threads for this session
+  List<MessageThread> get availableThreads {
+    return threads.values.toList()..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+  }
+
+  // Create a new thread from a message
+  ChatSession createThread(String parentMessageId, String threadName) {
+    final threadId = 'thread_${DateTime.now().millisecondsSinceEpoch}';
+    final newThread = MessageThread(
+      id: threadId,
+      name: threadName,
+      parentMessageId: parentMessageId,
+      createdAt: DateTime.now(),
+    );
+    
+    final newThreads = Map<String, MessageThread>.from(threads);
+    newThreads[threadId] = newThread;
+    
+    return ChatSession(
+      title: title,
+      messages: messages,
+      threads: newThreads,
+      currentThreadId: threadId,
+    );
+  }
+
+  // Switch to a different thread
+  ChatSession switchThread(String? threadId) {
+    return ChatSession(
+      title: title,
+      messages: messages,
+      threads: threads,
+      currentThreadId: threadId,
+    );
+  }
+
+  // Add message to current thread
+  ChatSession addMessage(Message message) {
+    final newMessages = List<Message>.from(messages);
+    
+    if (currentThreadId != null && message.threadId == null) {
+      // Add threadId to message if we're in a thread
+      final threadedMessage = message.copyWith(threadId: currentThreadId);
+      newMessages.add(threadedMessage);
+      
+      // Update thread message count
+      final newThreads = Map<String, MessageThread>.from(threads);
+      final currentThread = newThreads[currentThreadId];
+      if (currentThread != null) {
+        newThreads[currentThreadId] = currentThread.copyWith(
+          messageCount: currentThread.messageCount + 1,
+        );
+      }
+      
+      return ChatSession(
+        title: title,
+        messages: newMessages,
+        threads: newThreads,
+        currentThreadId: currentThreadId,
+      );
+    } else {
+      newMessages.add(message);
+      return ChatSession(
+        title: title,
+        messages: newMessages,
+        threads: threads,
+        currentThreadId: currentThreadId,
+      );
+    }
+  }
+
+  // Check if currently in main thread
+  bool get isMainThread => currentThreadId == null;
+
+  // Get current thread info
+  MessageThread? get currentThread => currentThreadId != null ? threads[currentThreadId] : null;
 }
 
 // NEW USER MODEL
